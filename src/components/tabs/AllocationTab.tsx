@@ -3,6 +3,7 @@ import { useProject } from '../../context/ProjectContext';
 import { Lock, Unlock, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { ParkingRuleType, ProgramUse, UseId } from '../../types';
 import { formatNumber } from '../../lib/format';
+import { SelectInput, TextInput } from '../ui/FormControls';
 
 const TYPOLOGY_HELP = {
   podium_tower: 'Best for compact mixed-use sites. Strong retail podium + separated vertical stacks.',
@@ -153,23 +154,23 @@ export function AllocationTab() {
                   <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg">
                     <div>
                       <label className="text-xs text-gray-500 dark:text-gray-400">Efficiency (%)</label>
-                      <input
+                      <TextInput
                         type="number"
                         min="0"
                         max="100"
                         value={use.efficiencyPct}
                         onChange={(e) => updateUse(use.id, { efficiencyPct: Number(e.target.value) })}
-                        className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-right"
+                        className="text-right"
                       />
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 dark:text-gray-400">Build Cost (IDR/m²)</label>
-                      <input
+                      <TextInput
                         type="number"
                         min="0"
                         value={use.buildCostPerSqm}
                         onChange={(e) => updateUse(use.id, { buildCostPerSqm: Number(e.target.value) })}
-                        className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-right"
+                        className="text-right"
                       />
                     </div>
                   </div>
@@ -238,7 +239,7 @@ export function AllocationTab() {
               return (
                 <div key={`parking-${use.id}`} className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-3 text-sm">{use.label}</div>
-                  <select
+                  <SelectInput
                     value={rule.ruleType}
                     onChange={(e) =>
                       updateState({
@@ -248,15 +249,15 @@ export function AllocationTab() {
                         },
                       })
                     }
-                    className="col-span-6 rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
+                    className="col-span-6"
                   >
                     {PARKING_RULE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
                     ))}
-                  </select>
-                  <input
+                  </SelectInput>
+                  <TextInput
                     type="number"
                     min="0"
                     value={rule.value}
@@ -268,7 +269,7 @@ export function AllocationTab() {
                         },
                       })
                     }
-                    className="col-span-3 rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                    className="col-span-3 text-right"
                   />
                 </div>
               );
@@ -277,34 +278,34 @@ export function AllocationTab() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-gray-200 dark:border-gray-800">
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400">Parking Strategy</label>
-                <select
+                <SelectInput
                   value={state.parkingStrategy}
                   onChange={(e) => updateState({ parkingStrategy: e.target.value as any })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+                  className="w-full"
                 >
                   <option value="surface">Surface</option>
                   <option value="podium">Podium</option>
                   <option value="basement">Basement</option>
-                </select>
+                </SelectInput>
               </div>
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400">Basement Levels</label>
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.basementLevels}
                   onChange={(e) => updateState({ basementLevels: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </div>
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400">Podium Parking Floors</label>
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.podiumParkingFloors}
                   onChange={(e) => updateState({ podiumParkingFloors: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </div>
             </div>

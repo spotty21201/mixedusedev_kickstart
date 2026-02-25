@@ -2,29 +2,42 @@ import React from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { InfoTip } from '../InfoTip';
 import { formatCurrency, formatNumber, parseNumber } from '../../lib/format';
+import { SelectInput, TextInput } from '../ui/FormControls';
+
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600 dark:text-gray-300">{label}</label>
+      {children}
+    </div>
+  );
+}
 
 function NumericInput({
   value,
   onChange,
   suffix,
   prefix,
+  disabled,
 }: {
   value: number;
   onChange: (val: number) => void;
   suffix?: string;
   prefix?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="relative">
-      {prefix && <span className="absolute left-3 top-2 text-gray-500 text-sm">{prefix}</span>}
-      <input
+      {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">{prefix}</span>}
+      <TextInput
         type="text"
         inputMode="decimal"
         value={formatNumber(value, 0)}
         onChange={(e) => onChange(parseNumber(e.target.value))}
-        className={`w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans ${prefix ? 'pl-10' : ''} ${suffix ? 'pr-8' : ''}`}
+        className={`text-right ${prefix ? 'pl-10' : ''} ${suffix ? 'pr-12' : ''}`}
+        disabled={disabled}
       />
-      {suffix && <span className="absolute right-3 top-2 text-gray-500 text-sm">{suffix}</span>}
+      {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{suffix}</span>}
     </div>
   );
 }
@@ -74,110 +87,125 @@ export function SetupTab() {
       <div className="lg:col-span-6 space-y-8">
         <section>
           <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Site Info</h2>
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Project Name</label>
-              <input
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
+            <Field label="Project Name">
+              <TextInput
                 type="text"
                 value={state.projectName}
                 onChange={(e) => updateSimple('projectName', e.target.value)}
-                className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
               />
-            </div>
+            </Field>
+
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Gross Site Area (m²)</label>
+              <Field label="Gross Site Area">
                 <NumericInput
                   value={state.siteArea}
+                  suffix="m²"
                   onChange={(val) => {
                     updateState({ siteArea: Math.max(0, val), landArea: Math.max(0, val) });
                   }}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Frontage (m)</label>
-                <NumericInput value={state.frontage} onChange={(val) => updateSimple('frontage', Math.max(0, val))} />
-              </div>
+              </Field>
+              <Field label="Frontage">
+                <NumericInput
+                  value={state.frontage}
+                  suffix="m"
+                  onChange={(val) => updateSimple('frontage', Math.max(0, val))}
+                />
+              </Field>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Shape Complexity</label>
-              <select
-                value={state.shapeComplexity}
-                onChange={(e) => updateSimple('shapeComplexity', e.target.value)}
-                className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-              >
+
+            <Field label="Shape Complexity">
+              <SelectInput value={state.shapeComplexity} onChange={(e) => updateSimple('shapeComplexity', e.target.value)}>
                 <option>Rectangular (Regular)</option>
                 <option>L-Shape (Semi-Regular)</option>
                 <option>Trapezoid (Irregular)</option>
-              </select>
-            </div>
+              </SelectInput>
+            </Field>
           </div>
         </section>
 
         <section>
           <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Regulation Parameters</h2>
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
-                  Max FAR (KLB)
-                  <InfoTip text="KLB/FAR is the maximum floor area ratio: total GFA divided by site area." />
-                </label>
+              <Field
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    Max FAR (KLB)
+                    <InfoTip text="KLB/FAR is the maximum floor area ratio: total GFA divided by site area." />
+                  </span>
+                }
+              >
                 <NumericInput value={state.maxFar} onChange={(val) => updateSimple('maxFar', Math.max(0, val))} suffix="x" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
-                  Max BCR (KDB)
-                  <InfoTip text="KDB is max building coverage: footprint as a percentage of site area." />
-                </label>
+              </Field>
+              <Field
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    Max BCR (KDB)
+                    <InfoTip text="KDB is max building coverage: footprint as a percentage of site area." />
+                  </span>
+                }
+              >
                 <NumericInput value={state.maxBcr} onChange={(val) => updateSimple('maxBcr', Math.max(0, Math.min(100, val)))} suffix="%" />
-              </div>
+              </Field>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
-                  Height Limit (KKOP)
-                  <InfoTip text="KKOP is aviation-related height control for building envelopes." />
-                </label>
+              <Field
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    Height Limit (KKOP)
+                    <InfoTip text="KKOP is aviation-related height control for building envelopes." />
+                  </span>
+                }
+              >
                 <NumericInput value={state.heightLimit} onChange={(val) => updateSimple('heightLimit', Math.max(0, val))} suffix="m" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
-                  Setback (GSB)
-                  <InfoTip text="GSB is the required setback distance from property boundaries or street edge." />
-                </label>
+              </Field>
+              <Field
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    Setback (GSB)
+                    <InfoTip text="GSB is the required setback distance from property boundaries or street edge." />
+                  </span>
+                }
+              >
                 <NumericInput value={state.setback} onChange={(val) => updateSimple('setback', Math.max(0, val))} suffix="m" />
-              </div>
+              </Field>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
-                Green Coefficient (KDH)
-                <InfoTip text="KDH is minimum green/open area requirement as percentage of site area." />
-              </label>
+
+            <Field
+              label={
+                <span className="inline-flex items-center gap-2">
+                  Green Coefficient (KDH)
+                  <InfoTip text="KDH is minimum green/open area requirement as percentage of site area." />
+                </span>
+              }
+            >
               <NumericInput value={state.greenCoeff} onChange={(val) => updateSimple('greenCoeff', Math.max(0, Math.min(100, val)))} suffix="%" />
-            </div>
+            </Field>
           </div>
         </section>
 
         <section>
           <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Land Acquisition</h2>
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Land Area (m²)</label>
-                <NumericInput value={state.landArea} onChange={(val) => updateSimple('landArea', Math.max(1, val))} />
-              </div>
-              <div className="flex items-end">
+              <Field label="Land Area">
+                <NumericInput value={state.landArea} onChange={(val) => updateSimple('landArea', Math.max(1, val))} suffix="m²" />
+              </Field>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-300">Sync</label>
                 <button
                   onClick={() => updateSimple('landArea', state.siteArea)}
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="w-full border border-gray-300 bg-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900"
                 >
                   Sync to Site Area
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+            <div className="flex items-center justify-between rounded-md border border-gray-300 dark:border-gray-700 p-3">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Use lump-sum asking</span>
               <input
                 type="checkbox"
@@ -188,8 +216,7 @@ export function SetupTab() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Asking Price (IDR/m²)</label>
+              <Field label="Asking Price">
                 <NumericInput
                   value={askingPerSqm}
                   onChange={(val) => {
@@ -200,10 +227,10 @@ export function SetupTab() {
                     }
                   }}
                   prefix="Rp"
+                  suffix="/m²"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Lump-Sum Asking (IDR)</label>
+              </Field>
+              <Field label="Lump-Sum Asking">
                 <NumericInput
                   value={lumpSumAsking}
                   onChange={(val) => {
@@ -215,10 +242,10 @@ export function SetupTab() {
                   }}
                   prefix="Rp"
                 />
-              </div>
+              </Field>
             </div>
 
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <div className="rounded-md border border-gray-300 dark:border-gray-700 p-4 space-y-3">
               <div className="grid grid-cols-12 gap-3 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
                 <div className="col-span-5">Adder</div>
                 <div className="col-span-3">%</div>
@@ -311,7 +338,7 @@ export function SetupTab() {
               />
             </div>
 
-            <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+            <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Land Base Price</span>
                 <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(metrics.landBasePrice)}</span>

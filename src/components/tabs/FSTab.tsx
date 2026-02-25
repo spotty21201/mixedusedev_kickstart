@@ -2,6 +2,7 @@ import React from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { InfoTip } from '../InfoTip';
 import { formatCurrency, formatNumber, formatPercent } from '../../lib/format';
+import { SelectInput, TextInput } from '../ui/FormControls';
 
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -45,12 +46,12 @@ export function FSTab() {
                   <div className="font-semibold mb-3">{use.label}</div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Field label="Build Cost (IDR/m²)">
-                      <input
+                      <TextInput
                         type="number"
                         min="0"
                         value={use.buildCostPerSqm}
                         onChange={(e) => updateUse(use.id, { buildCostPerSqm: Number(e.target.value) })}
-                        className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                        className="text-right"
                       />
                     </Field>
                     <Field
@@ -61,24 +62,24 @@ export function FSTab() {
                         </span>
                       }
                     >
-                      <input
+                      <TextInput
                         type="number"
                         min="0"
                         max="100"
                         value={use.efficiencyPct}
                         onChange={(e) => updateUse(use.id, { efficiencyPct: Number(e.target.value) })}
-                        className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                        className="text-right"
                       />
                     </Field>
 
                     {use.revenueModel === 'rent' && (
                       <Field label="Rent (IDR/m²/month)">
-                        <input
+                        <TextInput
                           type="number"
                           min="0"
                           value={use.rentPerSqmMonth}
                           onChange={(e) => updateUse(use.id, { rentPerSqmMonth: Number(e.target.value) })}
-                          className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                          className="text-right"
                         />
                       </Field>
                     )}
@@ -86,21 +87,21 @@ export function FSTab() {
                     {use.revenueModel === 'asp' && (
                       <>
                         <Field label="ASP (IDR/m²)">
-                          <input
+                          <TextInput
                             type="number"
                             min="0"
                             value={use.aspPerSqm}
                             onChange={(e) => updateUse(use.id, { aspPerSqm: Number(e.target.value) })}
-                            className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                            className="text-right"
                           />
                         </Field>
                         <Field label="Avg Unit Size (m²)">
-                          <input
+                          <TextInput
                             type="number"
                             min="1"
                             value={use.avgUnitSize}
                             onChange={(e) => updateUse(use.id, { avgUnitSize: Number(e.target.value) })}
-                            className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                            className="text-right"
                           />
                         </Field>
                       </>
@@ -109,31 +110,31 @@ export function FSTab() {
                     {use.revenueModel === 'hotel' && (
                       <>
                         <Field label="ADR (IDR/key/night)">
-                          <input
+                          <TextInput
                             type="number"
                             min="0"
                             value={use.adr}
                             onChange={(e) => updateUse(use.id, { adr: Number(e.target.value) })}
-                            className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                            className="text-right"
                           />
                         </Field>
                         <Field label="Occupancy (%)">
-                          <input
+                          <TextInput
                             type="number"
                             min="0"
                             max="100"
                             value={use.occupancyPct}
                             onChange={(e) => updateUse(use.id, { occupancyPct: Number(e.target.value) })}
-                            className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                            className="text-right"
                           />
                         </Field>
                         <Field label="Avg Key Size (m²)">
-                          <input
+                          <TextInput
                             type="number"
                             min="1"
                             value={use.avgKeySize}
                             onChange={(e) => updateUse(use.id, { avgKeySize: Number(e.target.value) })}
-                            className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                            className="text-right"
                           />
                         </Field>
                       </>
@@ -148,86 +149,86 @@ export function FSTab() {
             <h3 className="text-sm uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Underwriting Controls</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Field label="Infra Rate (IDR/m²)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.infraCostRate}
                   onChange={(e) => updateState({ infraCostRate: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Infra Basis">
-                <select
+                <SelectInput
                   value={state.infraCostBasis}
                   onChange={(e) => updateState({ infraCostBasis: e.target.value as any })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+                  className="w-full"
                 >
                   <option value="site">Per site m²</option>
                   <option value="buildable">Per buildable area (GFA)</option>
-                </select>
+                </SelectInput>
               </Field>
               <Field label="Yield / Cap Rate (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0.1"
                   step="0.1"
                   value={state.yieldCapRatePct}
                   onChange={(e) => updateState({ yieldCapRatePct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Developer Profit / Target Return (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.targetProfitPct}
                   onChange={(e) => updateState({ targetProfitPct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Soft Cost (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.softCostPct}
                   onChange={(e) => updateState({ softCostPct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Contingency (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.contingencyPct}
                   onChange={(e) => updateState({ contingencyPct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Finance / Interest Proxy (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.financePct}
                   onChange={(e) => updateState({ financePct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Holding Period (months)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.holdingPeriodMonths}
                   onChange={(e) => updateState({ holdingPeriodMonths: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Holding Cost Proxy (% annual)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.holdingCostPctAnnual}
                   onChange={(e) => updateState({ holdingCostPctAnnual: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
             </div>
@@ -237,39 +238,39 @@ export function FSTab() {
             <h3 className="text-sm uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Scenario Deltas (Base / Down / Up)</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Field label="Revenue Delta (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.deltaRevenuePct}
                   onChange={(e) => updateState({ deltaRevenuePct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Capex Delta (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.deltaCapexPct}
                   onChange={(e) => updateState({ deltaCapexPct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Cap Rate Delta (bps)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.deltaCapRateBps}
                   onChange={(e) => updateState({ deltaCapRateBps: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
               <Field label="Safety Headroom Threshold (%)">
-                <input
+                <TextInput
                   type="number"
                   min="0"
                   value={state.safetyHeadroomThresholdPct}
                   onChange={(e) => updateState({ safetyHeadroomThresholdPct: Number(e.target.value) })}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-right"
+                  className="text-right"
                 />
               </Field>
             </div>

@@ -60,55 +60,191 @@ export function Header() {
     const cBase = metrics.cases[0];
     const cDown = metrics.cases[1];
     const cUp = metrics.cases[2];
-    const gfaRows = activeUses
-      .map(
-        (use) =>
-          `<tr><td>${use.label}</td><td>${formatNumber(metrics.gfaByUse[use.id] ?? 0)}</td><td>${formatNumber(metrics.nlaByUse[use.id] ?? 0)}</td></tr>`,
-      )
+    const askingPerSqm = state.useLumpSumAsking
+      ? state.lumpSumAsking / Math.max(state.landArea, 1)
+      : state.askingPricePerSqm;
+    const totalAsking = askingPerSqm * state.landArea;
+    const useOrder = ['retail', 'office', 'hotel', 'residential', 'event'];
+    const orderedUses = activeUses
+      .slice()
+      .sort((a, b) => {
+        const ai = useOrder.indexOf(a.id);
+        const bi = useOrder.indexOf(b.id);
+        const ar = ai === -1 ? 999 : ai;
+        const br = bi === -1 ? 999 : bi;
+        if (ar === br) return a.label.localeCompare(b.label);
+        return ar - br;
+      });
+
+    const gfaTotal = orderedUses.reduce((sum, use) => sum + (metrics.gfaByUse[use.id] ?? 0), 0);
+    const nlaTotal = orderedUses.reduce((sum, use) => sum + (metrics.nlaByUse[use.id] ?? 0), 0);
+
+    const gfaRows = orderedUses
+      .map((use, idx) => {
+        const gfa = metrics.gfaByUse[use.id] ?? 0;
+        const nla = metrics.nlaByUse[use.id] ?? 0;
+        const eff = gfa > 0 ? (nla / gfa) * 100 : 0;
+        return `<tr class="${idx % 2 ? 'zebra' : ''}"><td>${use.label}</td><td>${formatNumber(gfa)}</td><td>${formatNumber(nla)}</td><td>${formatPercent(eff, 1)}</td></tr>`;
+      })
       .join('');
+
+    const formatHeadroomPdf = (value: number): string => {
+      if (value < -100) return '< -100%*';
+      return formatPercent(value, 1);
+    };
+    const formatBreakEven = (value: number): string => {
+      if (value <= 0) return 'N/A';
+      return formatCurrency(value);
+    };
+
+    const verdictBadgeClass =
+      metrics.activeVerdict === 'Good'
+        ? 'badge-good'
+        : metrics.activeVerdict === 'Borderline'
+          ? 'badge-borderline'
+          : 'badge-overpriced';
+    const spreadPct = askingPerSqm > 0 ? ((askingPerSqm - cBase.rlvPerSqm) / askingPerSqm) * 100 : 0;
+    const verdictSentence =
+      metrics.activeVerdict === 'Overpriced'
+        ? `Asking ${formatCurrency(askingPerSqm)}/m² exceeds Base RLV ${formatCurrency(cBase.rlvPerSqm)}/m² by ${formatPercent(Math.max(spreadPct, 0), 1)}.`
+        : metrics.activeVerdict === 'Borderline'
+          ? `Asking ${formatCurrency(askingPerSqm)}/m² is near Base RLV ${formatCurrency(cBase.rlvPerSqm)}/m² with limited buffer.`
+          : `Asking ${formatCurrency(askingPerSqm)}/m² is below Base RLV ${formatCurrency(cBase.rlvPerSqm)}/m² with positive headroom.`;
+    const exportedAt = new Date().toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    let titleProjectName = state.projectName;
+    if (titleProjectName.includes(' - ') && !titleProjectName.includes('(')) {
+      const [left, right] = titleProjectName.split(' - ');
+      if (left && right) titleProjectName = `${left} (${right})`;
+    }
 
     const html = `
       <html>
       <head>
         <title>${state.projectName} - Snapshot</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 14px; font-size: 11px; color:#111; }
-          h1,h2{ margin:0 0 6px 0; }
-          .row { display:flex; gap:8px; margin-bottom:8px; }
-          .card { border:1px solid #d4d4d8; padding:8px; border-radius:6px; flex:1; }
+          :root {
+            --sectionTitleMarginTop: 24px;
+            --sectionTitleMarginBottom: 12px;
+            --tableBlockPadding: 12px;
+            --tableBlockMarginBottom: 20px;
+          }
+          body { font-family: Arial, sans-serif; padding: 8px 12px; font-size: 10.5px; color:#111827; }
+          h2{ margin:0; color:#2563eb; font-size:18px; line-height:1.2; font-weight:700; }
+          .band-a { margin-bottom:10px; }
+          .band-b { margin-bottom:30px; }
+          .band-c { margin-top:4px; }
+          .title { margin:0 0 4px 0; font-size:24px; line-height:1.15; font-weight:700; }
+          .title .brand { color:#2563eb; }
+          .title .project { color:#374151; }
+          .meta { margin-bottom:8px; color:#6b7280; font-size:10px; }
+          .row { display:flex; gap:6px; margin-bottom:8px; }
+          .card { border:1px solid #d1d5db; padding:7px; border-radius:6px; flex:1; min-height:46px; }
+          .kpi-label { font-size:9px; color:#6b7280; text-transform:uppercase; margin-bottom:3px; }
+          .kpi-value { font-size:13px; font-weight:700; }
+          .kpi-risk { color:#f97316; }
+          .kpi-good { color:#2563eb; }
+          .acq { border:1px solid #d1d5db; border-radius:6px; padding:6px 8px; margin:2px 0 10px; display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+          .acq div { font-size:10px; }
+          .acq b { color:#111827; }
+          .section { margin-top: var(--sectionTitleMarginTop); }
+          .section-title-wrap { margin-bottom: var(--sectionTitleMarginBottom); }
+          .section-subtitle { margin-top:3px; color:#6b7280; font-size:9px; }
+          .table-block { padding: 0; margin-bottom: 30px; background:#ffffff; }
           table { width:100%; border-collapse:collapse; }
-          th,td { border:1px solid #e4e4e7; padding:4px; text-align:right; }
+          th,td { border:1px solid #d1d5db; padding:4px; text-align:right; }
+          th { color:#1d4ed8; background:#f9fafb; font-weight:700; font-size:10px; padding-top:3px; padding-bottom:3px; }
+          tr.zebra td { background:#fafafa; }
           th:first-child, td:first-child { text-align:left; }
+          .badge { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid; font-weight:700; font-size:10px; }
+          .badge-good { color:#1d4ed8; background:#eff6ff; border-color:#bfdbfe; }
+          .badge-borderline { color:#92400e; background:#fff7ed; border-color:#fdba74; }
+          .badge-overpriced { color:#b45309; background:#fff7ed; border-color:#fdba74; }
+          .verdict-line { margin-top: 12px; }
+          .footer { margin-top:12px; color:#6b7280; font-size:9px; border-top:1px solid #d1d5db; padding-top:4px; line-height:1.35; }
           @page { size: A4 portrait; margin: 8mm; }
         </style>
       </head>
       <body>
-        <h1>Mixed Use Destination Kickstart - Investor Snapshot</h1>
-        <div>Project: ${state.projectName}</div>
-        <div class="row">
-          <div class="card">Site Area: ${formatNumber(state.siteArea)} m2</div>
-          <div class="card">Max GFA: ${formatNumber(metrics.maxGfa)} m2</div>
-          <div class="card">Blended Eff: ${formatPercent(metrics.blendedEfficiencyPct)}</div>
-          <div class="card">Parking: ${formatNumber(metrics.parkingRequired)} / ${formatNumber(metrics.parkingAchieved)}</div>
+        <div class="band-a">
+          <h1 class="title"><span class="brand">Mixed Use Destination Kickstart</span> <span class="project">— ${titleProjectName} — Investment Snapshot</span></h1>
+          <div class="meta">Project: ${state.projectName} | Site Area: ${formatNumber(state.siteArea)} m² | Asking: ${formatCurrency(askingPerSqm)}/m²</div>
         </div>
-        <div class="row">
-          <div class="card">Total Acquisition: ${formatCurrency(metrics.totalAcquisitionCost)}</div>
-          <div class="card">Total Capex: ${formatCurrency(metrics.totalCapex)}</div>
-          <div class="card">Revenue: ${formatCurrency(metrics.annualRevenue)}</div>
-          <div class="card">EBITDA: ${formatCurrency(metrics.annualEbitda)}</div>
+
+        <div class="band-b">
+          <div class="row">
+            <div class="card"><div class="kpi-label">Site Area</div><div class="kpi-value">${formatNumber(state.siteArea)} m²</div></div>
+            <div class="card"><div class="kpi-label">Max GFA</div><div class="kpi-value">${formatNumber(metrics.maxGfa)} m²</div></div>
+            <div class="card"><div class="kpi-label">Blended NLA Eff</div><div class="kpi-value">${formatPercent(metrics.blendedEfficiencyPct, 1)}</div></div>
+            <div class="card"><div class="kpi-label">Parking (Req / Ach)</div><div class="kpi-value ${metrics.parkingCompliant ? 'kpi-good' : 'kpi-risk'}">${formatNumber(metrics.parkingRequired)} / ${formatNumber(metrics.parkingAchieved)}</div></div>
+            <div class="card"><div class="kpi-label">Asking Price (Rp/m²)</div><div class="kpi-value">${formatCurrency(askingPerSqm)}</div></div>
+            <div class="card"><div class="kpi-label">Total Asking (Rp)</div><div class="kpi-value">${formatCurrency(totalAsking)}</div></div>
+          </div>
+          <div class="acq">
+            <div>Land Area<br><b>${formatNumber(state.landArea)} m²</b></div>
+            <div>Asking<br><b>${formatCurrency(askingPerSqm)}/m²</b></div>
+            <div>Total Asking<br><b>${formatCurrency(totalAsking)}</b></div>
+            <div>RLV Base<br><b>${cBase.rlvPerSqm > 0 ? `${formatCurrency(cBase.rlvPerSqm)}/m²` : 'N/A'}</b></div>
+            <div>Headroom Base<br><b>${formatHeadroomPdf(cBase.headroomPct)}</b></div>
+            <div>Verdict<br><span class="badge ${verdictBadgeClass}">${metrics.activeVerdict}</span></div>
+          </div>
+          <div class="row">
+            <div class="card"><div class="kpi-label">Total Acquisition</div><div class="kpi-value">${formatCurrency(metrics.totalAcquisitionCost)}</div></div>
+            <div class="card"><div class="kpi-label">Total Capex</div><div class="kpi-value">${formatCurrency(metrics.totalCapex)}</div></div>
+            <div class="card"><div class="kpi-label">Revenue (Annual)</div><div class="kpi-value">${formatCurrency(metrics.annualRevenue)}</div></div>
+            <div class="card"><div class="kpi-label">EBITDA / NOI proxy</div><div class="kpi-value">${formatCurrency(metrics.annualEbitda)}</div></div>
+          </div>
         </div>
-        <h2>GFA / NLA by Use</h2>
-        <table><thead><tr><th>Use</th><th>GFA m2</th><th>NLA m2</th></tr></thead><tbody>${gfaRows}</tbody></table>
-        <h2 style="margin-top:8px;">RLV and Land Verdict</h2>
-        <table>
-          <thead><tr><th>Case</th><th>RLV Total</th><th>RLV/m2</th><th>Headroom %</th><th>Break-even Ask/m2</th></tr></thead>
-          <tbody>
-            <tr><td>Base</td><td>${formatCurrency(cBase.rlvTotal)}</td><td>${formatCurrency(cBase.rlvPerSqm)}</td><td>${formatPercent(cBase.headroomPct)}</td><td>${formatCurrency(cBase.breakEvenAskingPerSqm)}</td></tr>
-            <tr><td>Down</td><td>${formatCurrency(cDown.rlvTotal)}</td><td>${formatCurrency(cDown.rlvPerSqm)}</td><td>${formatPercent(cDown.headroomPct)}</td><td>${formatCurrency(cDown.breakEvenAskingPerSqm)}</td></tr>
-            <tr><td>Up</td><td>${formatCurrency(cUp.rlvTotal)}</td><td>${formatCurrency(cUp.rlvPerSqm)}</td><td>${formatPercent(cUp.headroomPct)}</td><td>${formatCurrency(cUp.breakEvenAskingPerSqm)}</td></tr>
-          </tbody>
-        </table>
-        <div style="margin-top:8px;"><b>Verdict:</b> ${metrics.activeVerdict}</div>
+
+        <div class="band-c">
+          <div class="section" style="margin-top:30px;">
+            <div class="section-title-wrap">
+              <h2>GFA / NLA by Use</h2>
+              <div class="section-subtitle">Gross vs Net Leasable Area and efficiency by function.</div>
+            </div>
+            <div class="table-block" style="margin-top:14px; margin-bottom:30px;">
+              <table>
+                <thead><tr><th>Use</th><th>GFA (m²)</th><th>NLA (m²)</th><th>Efficiency %</th></tr></thead>
+                <tbody>
+                  ${gfaRows}
+                  <tr><td><b>TOTAL</b></td><td><b>${formatNumber(gfaTotal)}</b></td><td><b>${formatNumber(nlaTotal)}</b></td><td><b>${formatPercent(gfaTotal > 0 ? (nlaTotal / gfaTotal) * 100 : 0, 1)}</b></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section" style="margin-top:36px;">
+            <div class="section-title-wrap">
+              <h2>RLV and Land Verdict</h2>
+              <div class="section-subtitle">Residual Land Value vs asking price under Base/Down/Up cases.</div>
+            </div>
+            <div class="table-block" style="margin-top:14px; margin-bottom:20px;">
+              <table>
+                <thead><tr><th>Case</th><th>RLV Total</th><th>RLV/m²</th><th>Asking (Rp/m²)</th><th>Headroom %</th><th>Break-even Ask/m²</th></tr></thead>
+                <tbody>
+                  <tr><td>Base</td><td>${formatCurrency(cBase.rlvTotal)}</td><td>${formatCurrency(cBase.rlvPerSqm)}</td><td>${formatCurrency(askingPerSqm)}</td><td>${formatHeadroomPdf(cBase.headroomPct)}</td><td>${formatBreakEven(cBase.breakEvenAskingPerSqm)}</td></tr>
+                  <tr class="zebra"><td>Down</td><td>${formatCurrency(cDown.rlvTotal)}</td><td>${formatCurrency(cDown.rlvPerSqm)}</td><td>${formatCurrency(askingPerSqm)}</td><td>${formatHeadroomPdf(cDown.headroomPct)}</td><td>${formatBreakEven(cDown.breakEvenAskingPerSqm)}</td></tr>
+                  <tr><td>Up</td><td>${formatCurrency(cUp.rlvTotal)}</td><td>${formatCurrency(cUp.rlvPerSqm)}</td><td>${formatCurrency(askingPerSqm)}</td><td>${formatHeadroomPdf(cUp.headroomPct)}</td><td>${formatBreakEven(cUp.breakEvenAskingPerSqm)}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="verdict-line">
+            <span class="badge ${verdictBadgeClass}">${metrics.activeVerdict}</span>
+            <span style="margin-left:6px;">${verdictSentence} Good requires ≥ +${formatNumber(state.safetyHeadroomThresholdPct)}% headroom.</span>
+          </div>
+        </div>
+        <div class="footer">
+          Assumptions: Cap rate ${formatPercent(state.yieldCapRatePct, 2)}, Soft cost ${formatPercent(state.softCostPct, 1)}, Contingency ${formatPercent(state.contingencyPct, 1)}, Target return ${formatPercent(state.targetProfitPct, 1)}.
+          <br/>
+          Version: v0.0 | Exported: ${exportedAt} | *Headroom below -100% is displayed as &lt; -100%.
+        </div>
       </body></html>
     `;
 
