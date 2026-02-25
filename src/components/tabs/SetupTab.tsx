@@ -1,69 +1,109 @@
 import React from 'react';
 import { useProject } from '../../context/ProjectContext';
+import { InfoTip } from '../InfoTip';
+import { formatCurrency, formatNumber, parseNumber } from '../../lib/format';
+
+function NumericInput({
+  value,
+  onChange,
+  suffix,
+  prefix,
+}: {
+  value: number;
+  onChange: (val: number) => void;
+  suffix?: string;
+  prefix?: string;
+}) {
+  return (
+    <div className="relative">
+      {prefix && <span className="absolute left-3 top-2 text-gray-500 text-sm">{prefix}</span>}
+      <input
+        type="text"
+        inputMode="decimal"
+        value={formatNumber(value, 0)}
+        onChange={(e) => onChange(parseNumber(e.target.value))}
+        className={`w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans ${prefix ? 'pl-10' : ''} ${suffix ? 'pr-8' : ''}`}
+      />
+      {suffix && <span className="absolute right-3 top-2 text-gray-500 text-sm">{suffix}</span>}
+    </div>
+  );
+}
+
+function AdderRow({
+  label,
+  pct,
+  amount,
+  onPct,
+  onAmount,
+}: {
+  label: string;
+  pct: number;
+  amount: number;
+  onPct: (val: number) => void;
+  onAmount: (val: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-12 gap-3 items-center">
+      <div className="col-span-5 text-sm text-gray-700 dark:text-gray-300">{label}</div>
+      <div className="col-span-3">
+        <NumericInput value={pct} onChange={onPct} suffix="%" />
+      </div>
+      <div className="col-span-4">
+        <NumericInput value={amount} onChange={onAmount} prefix="Rp" />
+      </div>
+    </div>
+  );
+}
 
 export function SetupTab() {
-  const { state, updateState } = useProject();
+  const { state, updateState, metrics } = useProject();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    updateState({
-      [name]: type === 'number' ? Number(value) : value,
-    });
+  const updateSimple = (key: keyof typeof state, value: string | number | boolean) => {
+    updateState({ [key]: value } as any);
   };
 
-  // Derived Calculations
-  const totalAcquisitionCost = state.siteArea * state.askingPricePerSqm;
-  const maxGfa = state.siteArea * state.maxFar;
-  const podiumFootprint = state.siteArea * (state.maxBcr / 100);
-  const towerFootprint = podiumFootprint * 0.33; // Simplified assumption for preview
+  const askingPerSqm = state.useLumpSumAsking
+    ? state.lumpSumAsking / Math.max(state.landArea, 1)
+    : state.askingPricePerSqm;
+  const lumpSumAsking = state.useLumpSumAsking
+    ? state.lumpSumAsking
+    : state.askingPricePerSqm * state.landArea;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      {/* Left Column: Inputs */}
-      <div className="lg:col-span-5 space-y-8">
-        
-        {/* Site Info Section */}
+      <div className="lg:col-span-6 space-y-8">
         <section>
           <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Site Info</h2>
           <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Project Name</label>
-              <input 
-                type="text" 
-                name="projectName"
-                value={state.projectName} 
-                onChange={handleInputChange}
-                className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500" 
+              <input
+                type="text"
+                value={state.projectName}
+                onChange={(e) => updateSimple('projectName', e.target.value)}
+                className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Gross Site Area (m²)</label>
-                <input 
-                  type="number" 
-                  name="siteArea"
-                  value={state.siteArea} 
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans" 
+                <NumericInput
+                  value={state.siteArea}
+                  onChange={(val) => {
+                    updateState({ siteArea: Math.max(0, val), landArea: Math.max(0, val) });
+                  }}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Frontage (m)</label>
-                <input 
-                  type="number" 
-                  name="frontage"
-                  value={state.frontage} 
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans" 
-                />
+                <NumericInput value={state.frontage} onChange={(val) => updateSimple('frontage', Math.max(0, val))} />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Shape Complexity</label>
-              <select 
-                name="shapeComplexity"
+              <select
                 value={state.shapeComplexity}
-                onChange={handleInputChange}
+                onChange={(e) => updateSimple('shapeComplexity', e.target.value)}
                 className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
               >
                 <option>Rectangular (Regular)</option>
@@ -74,214 +114,259 @@ export function SetupTab() {
           </div>
         </section>
 
-        {/* Regulation Parameters Section */}
         <section>
           <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Regulation Parameters</h2>
           <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Max FAR (KLB)</label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    step="0.1"
-                    name="maxFar"
-                    value={state.maxFar} 
-                    onChange={handleInputChange}
-                    className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans pr-8" 
-                  />
-                  <span className="absolute right-3 top-2 text-gray-400 text-sm">x</span>
-                </div>
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
+                  Max FAR (KLB)
+                  <InfoTip text="KLB/FAR is the maximum floor area ratio: total GFA divided by site area." />
+                </label>
+                <NumericInput value={state.maxFar} onChange={(val) => updateSimple('maxFar', Math.max(0, val))} suffix="x" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Max BCR (KDB)</label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    name="maxBcr"
-                    value={state.maxBcr} 
-                    onChange={handleInputChange}
-                    className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans pr-8" 
-                  />
-                  <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
-                </div>
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
+                  Max BCR (KDB)
+                  <InfoTip text="KDB is max building coverage: footprint as a percentage of site area." />
+                </label>
+                <NumericInput value={state.maxBcr} onChange={(val) => updateSimple('maxBcr', Math.max(0, Math.min(100, val)))} suffix="%" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Height Limit (KKOP)</label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    name="heightLimit"
-                    value={state.heightLimit} 
-                    onChange={handleInputChange}
-                    className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans pr-8" 
-                  />
-                  <span className="absolute right-3 top-2 text-gray-400 text-sm">m</span>
-                </div>
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
+                  Height Limit (KKOP)
+                  <InfoTip text="KKOP is aviation-related height control for building envelopes." />
+                </label>
+                <NumericInput value={state.heightLimit} onChange={(val) => updateSimple('heightLimit', Math.max(0, val))} suffix="m" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Setback (GSB)</label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    name="setback"
-                    value={state.setback} 
-                    onChange={handleInputChange}
-                    className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans pr-8" 
-                  />
-                  <span className="absolute right-3 top-2 text-gray-400 text-sm">m</span>
-                </div>
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
+                  Setback (GSB)
+                  <InfoTip text="GSB is the required setback distance from property boundaries or street edge." />
+                </label>
+                <NumericInput value={state.setback} onChange={(val) => updateSimple('setback', Math.max(0, val))} suffix="m" />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Green Coefficient (KDH)</label>
-              <div className="relative">
-                <input 
-                  type="number" 
-                  name="greenCoeff"
-                  value={state.greenCoeff} 
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans pr-8" 
-                />
-                <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
-              </div>
+              <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
+                Green Coefficient (KDH)
+                <InfoTip text="KDH is minimum green/open area requirement as percentage of site area." />
+              </label>
+              <NumericInput value={state.greenCoeff} onChange={(val) => updateSimple('greenCoeff', Math.max(0, Math.min(100, val)))} suffix="%" />
             </div>
           </div>
         </section>
 
-        {/* Land Acquisition Section */}
         <section>
           <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Land Acquisition</h2>
           <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Asking Price / m²</label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-gray-500 text-sm font-medium">Rp</span>
-                <input 
-                  type="number" 
-                  name="askingPricePerSqm"
-                  value={state.askingPricePerSqm} 
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 text-right font-sans pl-10" 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Land Area (m²)</label>
+                <NumericInput value={state.landArea} onChange={(val) => updateSimple('landArea', Math.max(1, val))} />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => updateSimple('landArea', state.siteArea)}
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Sync to Site Area
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Use lump-sum asking</span>
+              <input
+                type="checkbox"
+                checked={state.useLumpSumAsking}
+                onChange={(e) => updateSimple('useLumpSumAsking', e.target.checked)}
+                className="h-4 w-4"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Asking Price (IDR/m²)</label>
+                <NumericInput
+                  value={askingPerSqm}
+                  onChange={(val) => {
+                    if (state.useLumpSumAsking) {
+                      updateSimple('lumpSumAsking', val * state.landArea);
+                    } else {
+                      updateSimple('askingPricePerSqm', val);
+                    }
+                  }}
+                  prefix="Rp"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Lump-Sum Asking (IDR)</label>
+                <NumericInput
+                  value={lumpSumAsking}
+                  onChange={(val) => {
+                    if (state.useLumpSumAsking) {
+                      updateSimple('lumpSumAsking', val);
+                    } else {
+                      updateSimple('askingPricePerSqm', val / Math.max(state.landArea, 1));
+                    }
+                  }}
+                  prefix="Rp"
                 />
               </div>
             </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Total Acquisition Cost</span>
-                <span className="text-lg font-bold text-gray-900 dark:text-white font-sans">
-                  Rp {(totalAcquisitionCost / 1000000000).toFixed(1)} B
-                </span>
+
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+              <div className="grid grid-cols-12 gap-3 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
+                <div className="col-span-5">Adder</div>
+                <div className="col-span-3">%</div>
+                <div className="col-span-4">IDR</div>
+              </div>
+
+              <AdderRow
+                label="BPHTB / PPN / Fees"
+                pct={state.acquisitionAdders.bphtbFees.pct}
+                amount={state.acquisitionAdders.bphtbFees.amount}
+                onPct={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      bphtbFees: { ...state.acquisitionAdders.bphtbFees, pct: Math.max(0, val) },
+                    },
+                  })
+                }
+                onAmount={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      bphtbFees: { ...state.acquisitionAdders.bphtbFees, amount: Math.max(0, val) },
+                    },
+                  })
+                }
+              />
+              <AdderRow
+                label="Legal"
+                pct={state.acquisitionAdders.legal.pct}
+                amount={state.acquisitionAdders.legal.amount}
+                onPct={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      legal: { ...state.acquisitionAdders.legal, pct: Math.max(0, val) },
+                    },
+                  })
+                }
+                onAmount={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      legal: { ...state.acquisitionAdders.legal, amount: Math.max(0, val) },
+                    },
+                  })
+                }
+              />
+              <AdderRow
+                label="Due Diligence"
+                pct={state.acquisitionAdders.dueDiligence.pct}
+                amount={state.acquisitionAdders.dueDiligence.amount}
+                onPct={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      dueDiligence: { ...state.acquisitionAdders.dueDiligence, pct: Math.max(0, val) },
+                    },
+                  })
+                }
+                onAmount={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      dueDiligence: { ...state.acquisitionAdders.dueDiligence, amount: Math.max(0, val) },
+                    },
+                  })
+                }
+              />
+              <AdderRow
+                label="Broker"
+                pct={state.acquisitionAdders.broker.pct}
+                amount={state.acquisitionAdders.broker.amount}
+                onPct={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      broker: { ...state.acquisitionAdders.broker, pct: Math.max(0, val) },
+                    },
+                  })
+                }
+                onAmount={(val) =>
+                  updateState({
+                    acquisitionAdders: {
+                      ...state.acquisitionAdders,
+                      broker: { ...state.acquisitionAdders.broker, amount: Math.max(0, val) },
+                    },
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Land Base Price</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(metrics.landBasePrice)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Acquisition Adders</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(metrics.acquisitionAddersTotal)}</span>
+              </div>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between text-sm">
+                <span className="font-medium text-gray-900 dark:text-gray-100">Total Acquisition Cost</span>
+                <span className="font-bold text-blue-600 dark:text-blue-500">{formatCurrency(metrics.totalAcquisitionCost)}</span>
               </div>
             </div>
           </div>
         </section>
       </div>
 
-      {/* Right Column: Outputs */}
-      <div className="lg:col-span-7 flex flex-col space-y-6">
-        
-        {/* Envelope Preview */}
-        <div className="flex-grow bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
-            <span className="font-semibold text-sm text-gray-700 dark:text-gray-300">Envelope Preview</span>
-            <div className="flex space-x-2">
-              <button className="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-2 py-1 rounded text-gray-600 dark:text-gray-300">Reset View</button>
-              <button className="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-2 py-1 rounded text-gray-600 dark:text-gray-300">ISO</button>
+      <div className="lg:col-span-6 space-y-6">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 min-h-[300px]">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Envelope Preview</h3>
+          <div className="rounded-lg bg-gray-100 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6 h-[260px] flex items-end justify-center gap-5 select-none">
+            <div className="w-20 rounded-t bg-gray-300 dark:bg-gray-700" style={{ height: `${Math.max(30, Math.min(150, state.maxBcr * 1.8))}px` }} />
+            <div className="w-20 rounded-t bg-gray-500 dark:bg-gray-600" style={{ height: `${Math.max(40, Math.min(220, state.maxFar * 35))}px` }} />
+            <div className="w-20 rounded-t bg-gray-400 dark:bg-gray-650" style={{ height: `${Math.max(20, Math.min(150, (state.heightLimit / 150) * 180))}px` }} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3 tracking-wider">Buildability</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Effective Developable Area</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatNumber(metrics.effectiveDevelopableArea)} m²</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Max GFA</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-500">{formatNumber(metrics.maxGfa)} m²</span>
+              </div>
             </div>
           </div>
-          <div className="relative flex-grow bg-gray-100 dark:bg-gray-950 flex items-center justify-center overflow-hidden">
-            {/* Grid Background */}
-            <div 
-              className="absolute inset-0 opacity-10 dark:opacity-20" 
-              style={{ backgroundImage: 'radial-gradient(#6B7280 1px, transparent 1px)', backgroundSize: '20px 20px' }}
-            ></div>
-            
-            {/* 3D Envelope Representation */}
-            <div className="relative w-64 h-64 transform rotate-x-60 rotate-z-45 perspective-1000 transition-all duration-500">
-              {/* Site Boundary */}
-              <div className="absolute inset-0 bg-white dark:bg-gray-800 border-2 border-blue-500 dark:border-blue-400 opacity-30"></div>
-              {/* Podium */}
-              <div 
-                className="absolute bottom-0 left-4 right-4 bg-gray-300 dark:bg-gray-700 border border-white dark:border-gray-600 shadow-xl opacity-90 transition-all duration-500"
-                style={{ height: `${Math.min(state.maxBcr * 1.5, 120)}px` }}
-              ></div>
-              {/* Tower */}
-              <div 
-                className="absolute left-10 right-10 bg-gray-400 dark:bg-gray-600 border border-white dark:border-gray-500 shadow-2xl opacity-90 transition-all duration-500"
-                style={{ 
-                  bottom: `${Math.min(state.maxBcr * 1.5, 120)}px`,
-                  height: `${Math.min(state.maxFar * 30, 200)}px` 
-                }}
-              ></div>
-              {/* Setback Dashed Line */}
-              <div className="absolute -inset-4 border border-dashed border-red-400 opacity-60 pointer-events-none"></div>
-            </div>
-
-            {/* Legend */}
-            <div className="absolute top-6 right-6 bg-white/90 dark:bg-gray-800/90 p-3 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 text-xs backdrop-blur-sm">
-              <div className="flex items-center space-x-2 mb-1">
-                <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded-sm"></div>
-                <span className="text-gray-600 dark:text-gray-300">Podium (Retail)</span>
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3 tracking-wider">Land Test</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Asking (effective)</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(askingPerSqm)}/m²</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-gray-400 dark:bg-gray-500 rounded-sm"></div>
-                <span className="text-gray-600 dark:text-gray-300">Tower (Res/Off)</span>
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Base Headroom</span>
+                <span className={`font-semibold ${metrics.activeHeadroomPct >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{metrics.activeHeadroomPct.toFixed(1)}%</span>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Live Summary */}
-        <div>
-          <h3 className="font-bold text-gray-900 dark:text-white mb-4">Live Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-4 tracking-wider">Buildable Area</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Podium Footprint</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white font-sans">{podiumFootprint.toLocaleString()} m²</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Tower Footprint</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white font-sans">{towerFootprint.toLocaleString(undefined, {maximumFractionDigits: 0})} m²</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-800 h-px my-2"></div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Total Buildable GFA</span>
-                  <span className="text-base font-bold text-blue-600 dark:text-blue-500 font-sans">{maxGfa.toLocaleString()} m²</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-4 tracking-wider">Constraints Check</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Current KDB</span>
-                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-500 font-sans">
-                    {state.maxBcr}% <span className="text-xs font-normal text-gray-500">(Max {state.maxBcr}%)</span>
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Current KLB</span>
-                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-500 font-sans">
-                    {state.maxFar.toFixed(1)} <span className="text-xs font-normal text-gray-500">(Max {state.maxFar.toFixed(1)})</span>
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-800 h-px my-2"></div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Efficiency Loss</span>
-                  <span className="text-base font-bold text-gray-500 font-sans">0.0%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   );

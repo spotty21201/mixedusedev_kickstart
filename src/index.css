@@ -10,6 +10,15 @@
   body {
     @apply antialiased;
   }
+
+  ::selection {
+    background: #bfdbfe;
+    color: inherit;
+  }
+
+  img, svg {
+    -webkit-user-drag: none;
+  }
 }
 
 @layer utilities {
