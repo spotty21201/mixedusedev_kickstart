@@ -243,7 +243,11 @@ export function Header() {
         <div class="footer">
           Assumptions: Cap rate ${formatPercent(state.yieldCapRatePct, 2)}, Soft cost ${formatPercent(state.softCostPct, 1)}, Contingency ${formatPercent(state.contingencyPct, 1)}, Target return ${formatPercent(state.targetProfitPct, 1)}.
           <br/>
-          Version: v0.0 | Exported: ${exportedAt} | *Headroom below -100% is displayed as &lt; -100%.
+          Mixed Use Destination Kickstart | Version: v0.0 | Exported: ${exportedAt} | *Headroom below -100% is displayed as &lt; -100%.
+          <br/>
+          Developed by Kolabs.Design for HDA+AIM Collective.
+          <br/>
+          Kolabs.Design - https://kolabs.design
         </div>
       </body></html>
     `;
